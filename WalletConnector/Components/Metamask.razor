@@ -1,0 +1,79 @@
+﻿@inherits WalletComponent
+
+@if (IsVisible)
+{
+    @if (HostProvider.Available && !string.IsNullOrEmpty(HostProvider.SelectedAccount))
+    {
+        <button type="button" class="@ConnectedCssClass" @onclick="@OnClick">@ResolveAccountName()</button>
+    }
+    else if (HostProvider.Available && string.IsNullOrEmpty(HostProvider.SelectedAccount))
+    {
+        <button type="button" class="@ConnectCssClass" @onclick="@EnableEthereumAsync">Connect Metamask</button>
+    }
+    else if(!HostProvider.Available)
+    {
+        <a class="@UnavailableCssClass" href="@UnavailableHref" target="_blank">Get Metamask</a>
+    }
+}
+
+@code
+{
+    private const string DefaultCss = "btn btn-sm btn-gradient gradient-2 rounded-pill";
+
+    [Parameter]
+    public bool IsVisible { get; set; } = true;
+
+    [Parameter]
+    public string? Url { get; set; }
+
+    [Parameter]
+    public string? ConnectedCssClass { get; set; } = DefaultCss;
+
+    [Parameter]
+    public string? ConnectCssClass { get; set; } = DefaultCss;
+
+    [Parameter]
+    public string? UnavailableCssClass { get; set; } = DefaultCss;
+
+    [Parameter]
+    public string? UnavailableHref { get; set; } = "https://metamask.io/download";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        // fires AvailabilityChanged
+        if (await HostProvider.CheckProviderAvailabilityAsync())
+        {
+            if (string.IsNullOrWhiteSpace(HostProvider.SelectedAccount))
+            {
+                // fires SelectedAccountChanged
+                await HostProvider.GetProviderSelectedAccountAsync();
+            }
+
+            // fires NetworkChanged
+            await HostProvider.GetProviderNetworkAsync();
+        }
+    }
+
+    private async Task EnableEthereumAsync()
+    {
+        // fires SelectedAccountChanged && EnabledChanged
+        await HostProvider.EnableProviderAsync();
+    }
+
+    private void OnClick()
+    {
+        if(!string.IsNullOrWhiteSpace(Url))
+            Nav.NavigateTo(Url);
+    }
+
+    public virtual string ResolveAccountName()
+    {
+        var sb = new StringBuilder();
+        sb.Append(HostProvider.SelectedAccount?[..6]);
+        sb.Append("...");
+        sb.Append(HostProvider.SelectedAccount?.Substring(HostProvider.SelectedAccount.Length - 5, 5));
+        return sb.ToString();
+    }
+}
